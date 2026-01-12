@@ -1,0 +1,29 @@
+# build 
+build/
+imgr
+imgr-*
+
+# test
+testdata/output*
+testdata/empty.jpg
+testdata/corrupt.jpg
+
+# Go
+*.test
+*.out
+coverage.out
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# temporary files
+*.tmp
+tmp/
