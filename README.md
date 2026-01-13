@@ -58,6 +58,7 @@ imgr is designed to be called by AI assistants and automated systems:
 - **Clear error messages** - Full English sentences improve LLM understanding and error recovery.
 - **Predictable behavior** - Consistent results across different inputs enable reliable automation.
 - **Simple CLI** - Straightforward command structure makes it easy to generate correct invocations.
+- **JSON output** - Optional `--json` flag enables structured output for programmatic use.
 
 ### Core Features
 
@@ -77,26 +78,35 @@ Write: JPEG, PNG, GIF, TIFF
 
 ```bash
 # Convert JPEG to PNG
-imgr photo.jpg photo.png
+imgr transform photo.jpg photo.png
 
 # Resize to 800px wide (maintains aspect ratio)
-imgr -w 800 large.jpg small.jpg
+imgr transform -w 800 large.jpg small.jpg
 
 # Fit within 1920x1080 (maintains aspect ratio)
-imgr -w 1920 -h 1080 photo.jpg wallpaper.jpg
+imgr transform -w 1920 -h 1080 photo.jpg wallpaper.jpg
 
 # Get image information
 imgr info photo.jpg
+
+# Get image information as JSON
+imgr --json info photo.jpg
 ```
+
+### Global Flags
+
+- `--json` - Output results as JSON for programmatic use.
+- `--help` - Show help information.
+- `--version` - Show version information.
 
 ### Commands
 
-#### transform (default)
+#### transform
 
 Resize or convert images.
 
 ```bash
-imgr [options] <input> <output>
+imgr transform [options] <input> <output>
 ```
 
 **Flags:**
@@ -104,33 +114,32 @@ imgr [options] <input> <output>
 - `-h, --height N` - Sets the output height in pixels (or maximum height when width is also specified).
 - `-q, --quality N` - Sets the JPEG quality from 0 to 100 (default: 90).
 - `--no-enlarge` - Prevents the output image from being larger than the source image.
-- `--help` - Shows help information.
 
 **Examples:**
 
 ```bash
 # Width only - scales to that width
-imgr -w 800 photo.jpg thumbnail.jpg
+imgr transform -w 800 photo.jpg thumbnail.jpg
 
 # Height only - scales to that height
-imgr -h 600 photo.jpg thumbnail.jpg
+imgr transform -h 600 photo.jpg thumbnail.jpg
 
 # Both dimensions - fits within bounds (maintains aspect)
-imgr -w 1920 -h 1080 photo.jpg wallpaper.jpg
+imgr transform -w 1920 -h 1080 photo.jpg wallpaper.jpg
 # 2000x1500 → 1440x1080 (fits within box, maintains aspect)
 # 1600x1200 → 1440x1080 (fits width)
 
 # Prevent upscaling
-imgr -w 2000 -h 2000 --no-enlarge small.jpg output.jpg
+imgr transform -w 2000 -h 2000 --no-enlarge small.jpg output.jpg
 # 800x600 stays 800x600 (no enlargement)
 
 # High quality JPEG
-imgr -w 1920 -q 95 photo.jpg high-quality.jpg
+imgr transform -w 1920 -q 95 photo.jpg high-quality.jpg
 
 # Format conversion
-imgr photo.heic photo.jpg          # HEIC → JPEG
-imgr screenshot.png graphic.jpg    # PNG → JPEG
-imgr photo.jpg lossless.png       # JPEG → PNG
+imgr transform photo.heic photo.jpg          # HEIC → JPEG
+imgr transform screenshot.png graphic.jpg    # PNG → JPEG
+imgr transform photo.jpg lossless.png        # JPEG → PNG
 ```
 
 #### info
@@ -153,22 +162,55 @@ Color Model:  YCbCr
 File Size:    245680 bytes (239.92 KB)
 ```
 
+### JSON Output
+
+Use the `--json` flag for structured output, useful when calling imgr from scripts or other programs.
+
+**Success response:**
+```json
+{
+  "success": true,
+  "data": {
+    "file": "photo.jpg",
+    "path": "/path/to/photo.jpg",
+    "format": "jpeg",
+    "width": 1920,
+    "height": 1080,
+    "aspect_ratio": 1.78,
+    "has_alpha": false,
+    "color_model": "YCbCr",
+    "file_size_bytes": 245680,
+    "file_size_kb": 239.92
+  }
+}
+```
+
+**Error response:**
+```json
+{
+  "success": false,
+  "error": {
+    "message": "The file photo.jpg could not be accessed: open photo.jpg: no such file or directory."
+  }
+}
+```
+
 ### Common Use Cases
 
 #### Convert iPhone HEIC photos
 
 ```bash
 # Single file
-imgr photo.heic photo.jpg
+imgr transform photo.heic photo.jpg
 
 # Batch convert all HEIC files
 for file in *.heic; do
-  imgr "$file" "${file%.heic}.jpg"
+  imgr transform "$file" "${file%.heic}.jpg"
 done
 
 # Resize while converting
 for file in *.heic; do
-  imgr -w 1920 "$file" "${file%.heic}.jpg"
+  imgr transform -w 1920 "$file" "${file%.heic}.jpg"
 done
 ```
 
@@ -176,11 +218,11 @@ done
 
 ```bash
 # Single thumbnail
-imgr -w 400 -h 400 photo.jpg thumb.jpg
+imgr transform -w 400 -h 400 photo.jpg thumb.jpg
 
 # Batch create thumbnails
 for file in *.jpg; do
-  imgr -w 300 -h 300 "$file" "thumb_$file"
+  imgr transform -w 300 -h 300 "$file" "thumb_$file"
 done
 ```
 
@@ -188,20 +230,36 @@ done
 
 ```bash
 # Reduce size with quality setting
-imgr -w 1200 -q 85 large.jpg web.jpg
+imgr transform -w 1200 -q 85 large.jpg web.jpg
 
 # Fit within common screen sizes
-imgr -w 1920 -h 1080 --no-enlarge photo.jpg optimized.jpg
+imgr transform -w 1920 -h 1080 --no-enlarge photo.jpg optimized.jpg
 ```
 
 #### Social media sizing
 
 ```bash
 # Instagram post (max 1080x1080, maintains aspect)
-imgr -w 1080 -h 1080 photo.jpg instagram.jpg
+imgr transform -w 1080 -h 1080 photo.jpg instagram.jpg
 
 # Fit within specific dimensions
-imgr -w 1500 -h 500 header.jpg twitter.jpg
+imgr transform -w 1500 -h 500 header.jpg twitter.jpg
+```
+
+#### Programmatic use
+
+```bash
+# Get dimensions from a script
+result=$(imgr --json info photo.jpg)
+width=$(echo "$result" | jq '.data.width')
+height=$(echo "$result" | jq '.data.height')
+
+# Check for errors
+if echo "$result" | jq -e '.success' > /dev/null; then
+  echo "Image is ${width}x${height}"
+else
+  echo "Error: $(echo "$result" | jq -r '.error.message')"
+fi
 ```
 
 ## Aspect Ratio Behavior
@@ -263,6 +321,7 @@ Test images are in `testdata/`. The test suite includes:
 - Aspect ratio preservation
 - Dimension validation
 - Info command
+- JSON output
 - Error handling
 
 ## Dependencies
@@ -291,6 +350,7 @@ All other formats (JPEG, PNG, GIF, TIFF, WebP) are pure Go with zero runtime dep
 - Format conversion
 - Aspect ratio preservation
 - Image metadata inspection
+- JSON output for programmatic use
 
 ## What imgr doesn't include
 
