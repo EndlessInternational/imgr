@@ -170,27 +170,27 @@ func loadImage( path string ) ( image.Image, string, error ) {
 func decodeHeif( path string ) ( image.Image, string, error ) {
 	heifContext, err := heif.NewContext()
 	if err != nil {
-		return nil, "", fmt.Errorf( "Failed to create HEIF context: %w", err )
+		return nil, "", fmt.Errorf( "The HEIF context could not be created: %w", err )
 	}
 
 	err = heifContext.ReadFromFile( path )
 	if err != nil {
-		return nil, "", fmt.Errorf( "Failed to read HEIF file: %w", err )
+		return nil, "", fmt.Errorf( "The HEIF file could not be read: %w", err )
 	}
 
 	handle, err := heifContext.GetPrimaryImageHandle()
 	if err != nil {
-		return nil, "", fmt.Errorf( "Failed to get primary image: %w", err )
+		return nil, "", fmt.Errorf( "The primary image could not be retrieved: %w", err )
 	}
 
 	img, err := handle.DecodeImage( heif.ColorspaceUndefined, heif.ChromaUndefined, nil )
 	if err != nil {
-		return nil, "", fmt.Errorf( "Failed to decode HEIF image: %w", err )
+		return nil, "", fmt.Errorf( "The HEIF image could not be decoded: %w", err )
 	}
 
 	goImage, err := img.GetImage()
 	if err != nil {
-		return nil, "", fmt.Errorf( "Failed to convert HEIF to usable format: %w", err )
+		return nil, "", fmt.Errorf( "The HEIF image could not be converted: %w", err )
 	}
 
 	return goImage, "heif", nil
@@ -512,7 +512,7 @@ func encodeOutput( path string, extension string, img image.Image, quality int, 
 	if err != nil {
 		outputFile.Close()
 		os.Remove( path )
-		return fmt.Errorf( "Failed to encode image as %s: %w", effectiveExtension, err )
+		return fmt.Errorf( "The image could not be encoded as %s: %w", effectiveExtension, err )
 	}
 
 	return outputFile.Close()
