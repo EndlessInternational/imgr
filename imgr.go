@@ -37,6 +37,21 @@ type TransformResult struct {
 	Message      					string `json:"message"`
 }
 
+type ClipResult struct {
+	InputFile    					string `json:"input_file"`
+	OutputFile   					string `json:"output_file"`
+	Format       					string `json:"format"`
+	OriginalSize 					Size   `json:"original_size"`
+	ClipRegion   					struct {
+		X1 								int `json:"x1"`
+		Y1 								int `json:"y1"`
+		X2 								int `json:"x2"`
+		Y2 								int `json:"y2"`
+	}                     `json:"clip_region"`
+	ClipSize     					Size   `json:"clip_size"`
+	Message      					string `json:"message"`
+}
+
 type InfoResult struct {
 	File        					string  `json:"file"`
 	Path        					string  `json:"path"`
@@ -116,6 +131,40 @@ func main() {
 				Usage:     		"Display information about an image",
 				UsageText: 		"imgr info <input>",
 				Action:    		imageInfoCommand,
+			},
+			{
+				Name:      		"clip",
+				Usage:     		"Extract a rectangular region from an image",
+				UsageText: 		"imgr clip [options] <input> <output>",
+				Flags: []cli.Flag{
+					&cli.IntFlag{
+						Name:     	"x1",
+						Usage:    	"left edge x coordinate",
+						Required: 	true,
+					},
+					&cli.IntFlag{
+						Name:     	"y1",
+						Usage:    	"top edge y coordinate",
+						Required: 	true,
+					},
+					&cli.IntFlag{
+						Name:     	"x2",
+						Usage:    	"right edge x coordinate",
+						Required: 	true,
+					},
+					&cli.IntFlag{
+						Name:     	"y2",
+						Usage:    	"bottom edge y coordinate",
+						Required: 	true,
+					},
+					&cli.IntFlag{
+						Name:    	"quality",
+						Aliases: 	[]string{ "q" },
+						Usage:   	"JPEG quality (0-100)",
+						Value:   	90,
+					},
+				},
+				Action: clipImageCommand,
 			},
 		},
 	}
@@ -470,6 +519,126 @@ func imageInfo( context *cli.Context ) ( *InfoResult, error ) {
 		FileSize:    fileInfo.Size(),
 		FileSizeKB:  float64( fileInfo.Size() ) / 1024.0,
 	}, nil
+}
+
+func clipImageCommand( context *cli.Context ) error {
+	useJSON := context.Bool( "json" )
+	result, err := clipImage( context )
+
+	if err != nil {
+		outputError( err.Error(), useJSON )
+		return err
+	}
+
+	if useJSON {
+		outputSuccess( result, useJSON )
+	} else {
+		fmt.Println( result.Message )
+		fmt.Printf( "✓ Saved to %s\n", result.OutputFile )
+	}
+
+	return nil
+}
+
+func clipImage( context *cli.Context ) ( *ClipResult, error ) {
+	if context.NArg() != 2 {
+		return nil, fmt.Errorf( "Expected 2 arguments ( input and output ), but got %d.", context.NArg() )
+	}
+
+	inputPath := context.Args().Get( 0 )
+	outputPath := context.Args().Get( 1 )
+	x1 := context.Int( "x1" )
+	y1 := context.Int( "y1" )
+	x2 := context.Int( "x2" )
+	y2 := context.Int( "y2" )
+	quality := context.Int( "quality" )
+
+	if quality < 0 || quality > 100 {
+		return nil, fmt.Errorf( "Quality must be between 0 and 100, but got %d.", quality )
+	}
+
+	if x1 < 0 || y1 < 0 || x2 < 0 || y2 < 0 {
+		return nil, fmt.Errorf( "Coordinates cannot be negative." )
+	}
+
+	if x2 <= x1 {
+		return nil, fmt.Errorf( "x2 must be greater than x1 ( got x1=%d, x2=%d ).", x1, x2 )
+	}
+
+	if y2 <= y1 {
+		return nil, fmt.Errorf( "y2 must be greater than y1 ( got y1=%d, y2=%d ).", y1, y2 )
+	}
+
+	sourceImage, format, err := loadImage( inputPath )
+	if err != nil {
+		return nil, fmt.Errorf(
+			"The image file %s could not be decoded ( possibly corrupt or unsupported format ): %w",
+			inputPath, err )
+	}
+
+	if sourceImage == nil {
+		return nil, fmt.Errorf( "The decoded image from %s is invalid.", inputPath )
+	}
+
+	bounds := sourceImage.Bounds()
+	originalWidth := bounds.Dx()
+	originalHeight := bounds.Dy()
+
+	if originalWidth <= 0 || originalHeight <= 0 {
+		return nil, fmt.Errorf( "The image %s has invalid dimensions: %dx%d.",
+			inputPath, originalWidth, originalHeight )
+	}
+
+	if x2 > originalWidth {
+		return nil, fmt.Errorf( "The x2 coordinate ( %d ) exceeds the image width ( %d ).", x2, originalWidth )
+	}
+
+	if y2 > originalHeight {
+		return nil, fmt.Errorf( "The y2 coordinate ( %d ) exceeds the image height ( %d ).", y2, originalHeight )
+	}
+
+	clipWidth := x2 - x1
+	clipHeight := y2 - y1
+
+	// create the clipped image by drawing the source region onto a new image
+	clippedImage := image.NewRGBA( image.Rect( 0, 0, clipWidth, clipHeight ) )
+	sourceRect := image.Rect( x1, y1, x2, y2 )
+
+	draw.Draw(
+		clippedImage,
+		clippedImage.Bounds(),
+		sourceImage,
+		sourceRect.Min,
+		draw.Src,
+	)
+
+	message := fmt.Sprintf( "Clipping %s [%s] region ( %d,%d )-( %d,%d ) -> %dx%d",
+		filepath.Base( inputPath ),
+		format,
+		x1, y1, x2, y2,
+		clipWidth, clipHeight,
+	)
+
+	outputExtension := strings.ToLower( filepath.Ext( outputPath ) )
+	err = encodeOutput( outputPath, outputExtension, clippedImage, quality, format )
+	if err != nil {
+		return nil, fmt.Errorf( "The output file %s could not be written: %w", outputPath, err )
+	}
+
+	result := &ClipResult{
+		InputFile:    inputPath,
+		OutputFile:   outputPath,
+		Format:       format,
+		OriginalSize: Size{ Width: originalWidth, Height: originalHeight },
+		ClipSize:     Size{ Width: clipWidth, Height: clipHeight },
+		Message:      message,
+	}
+	result.ClipRegion.X1 = x1
+	result.ClipRegion.Y1 = y1
+	result.ClipRegion.X2 = x2
+	result.ClipRegion.Y2 = y2
+
+	return result, nil
 }
 
 func encodeOutput( path string, extension string, img image.Image, quality int, inputFormat string ) error {

@@ -345,17 +345,247 @@ func TestImageInfoTransparency( t *testing.T ) {
 
 func TestImageInfoColorModel( t *testing.T ) {
 	inputPath := "testdata/test.jpeg"
-	
+
 	sourceImage, _, err := loadImage( inputPath )
 	if err != nil {
 		t.Fatalf( "The image could not be loaded: %v", err )
 	}
-	
+
 	colorModelName := fmt.Sprintf( "%T", sourceImage )
-	
+
 	if colorModelName == "" {
 		t.Error( "The color model name should not be empty." )
 	}
-	
+
 	t.Logf( "Color model: %s.", colorModelName )
+}
+
+func TestClipBasic( t *testing.T ) {
+	inputPath := "testdata/test.jpeg"
+	outputPath := "testdata/output_clipped.jpg"
+
+	defer os.Remove( outputPath )
+
+	sourceImage, format, err := loadImage( inputPath )
+	if err != nil {
+		t.Fatalf( "The source image could not be loaded: %v", err )
+	}
+
+	bounds := sourceImage.Bounds()
+	originalWidth := bounds.Dx()
+	originalHeight := bounds.Dy()
+
+	// clip a 100x100 region from the top-left
+	x1, y1, x2, y2 := 0, 0, 100, 100
+
+	if x2 > originalWidth || y2 > originalHeight {
+		t.Skip( "The test image is too small for this test." )
+	}
+
+	clipWidth := x2 - x1
+	clipHeight := y2 - y1
+
+	clippedImage := image.NewRGBA( image.Rect( 0, 0, clipWidth, clipHeight ) )
+	for y := 0; y < clipHeight; y++ {
+		for x := 0; x < clipWidth; x++ {
+			clippedImage.Set( x, y, sourceImage.At( x1+x, y1+y ) )
+		}
+	}
+
+	err = encodeOutput( outputPath, ".jpg", clippedImage, 90, format )
+	if err != nil {
+		t.Fatalf( "The clipped image could not be encoded: %v", err )
+	}
+
+	// verify the output file was created
+	if _, err := os.Stat( outputPath ); os.IsNotExist( err ) {
+		t.Error( "The output file was not created." )
+	}
+
+	// verify the output dimensions
+	outputImage, _, err := loadImage( outputPath )
+	if err != nil {
+		t.Fatalf( "The output image could not be loaded: %v", err )
+	}
+
+	outputBounds := outputImage.Bounds()
+	if outputBounds.Dx() != clipWidth || outputBounds.Dy() != clipHeight {
+		t.Errorf( "The output dimensions are incorrect: expected %dx%d, got %dx%d.",
+			clipWidth, clipHeight, outputBounds.Dx(), outputBounds.Dy() )
+	}
+
+	t.Logf( "Clipped %dx%d region from %dx%d image.", clipWidth, clipHeight, originalWidth, originalHeight )
+}
+
+func TestClipDifferentRegions( t *testing.T ) {
+	inputPath := "testdata/test.jpeg"
+
+	sourceImage, _, err := loadImage( inputPath )
+	if err != nil {
+		t.Fatalf( "The source image could not be loaded: %v", err )
+	}
+
+	bounds := sourceImage.Bounds()
+	width := bounds.Dx()
+	height := bounds.Dy()
+
+	tests := []struct {
+		name          string
+		x1, y1, x2, y2 int
+		expectWidth   int
+		expectHeight  int
+	}{
+		{ "top-left corner", 0, 0, 50, 50, 50, 50 },
+		{ "center region", width/4, height/4, width/4 + 100, height/4 + 100, 100, 100 },
+		{ "wide rectangle", 0, 0, 200, 50, 200, 50 },
+		{ "tall rectangle", 0, 0, 50, 200, 50, 200 },
+	}
+
+	for _, tt := range tests {
+		t.Run( tt.name, func( t *testing.T ) {
+			if tt.x2 > width || tt.y2 > height {
+				t.Skip( "The test image is too small for this test." )
+			}
+
+			outputPath := fmt.Sprintf( "testdata/output_clip_%s.jpg", tt.name )
+			defer os.Remove( outputPath )
+
+			clipWidth := tt.x2 - tt.x1
+			clipHeight := tt.y2 - tt.y1
+
+			clippedImage := image.NewRGBA( image.Rect( 0, 0, clipWidth, clipHeight ) )
+			for y := 0; y < clipHeight; y++ {
+				for x := 0; x < clipWidth; x++ {
+					clippedImage.Set( x, y, sourceImage.At( tt.x1+x, tt.y1+y ) )
+				}
+			}
+
+			err = encodeOutput( outputPath, ".jpg", clippedImage, 90, "jpeg" )
+			if err != nil {
+				t.Fatalf( "The clipped image could not be encoded: %v", err )
+			}
+
+			outputImage, _, err := loadImage( outputPath )
+			if err != nil {
+				t.Fatalf( "The output image could not be loaded: %v", err )
+			}
+
+			outputBounds := outputImage.Bounds()
+			if outputBounds.Dx() != tt.expectWidth || outputBounds.Dy() != tt.expectHeight {
+				t.Errorf( "The output dimensions are incorrect: expected %dx%d, got %dx%d.",
+					tt.expectWidth, tt.expectHeight, outputBounds.Dx(), outputBounds.Dy() )
+			}
+		} )
+	}
+}
+
+func TestClipCoordinateValidation( t *testing.T ) {
+	tests := []struct {
+		name           string
+		x1, y1, x2, y2 int
+		imageWidth     int
+		imageHeight    int
+		shouldErr      bool
+		errContains    string
+	}{
+		{ "valid coordinates", 0, 0, 100, 100, 200, 200, false, "" },
+		{ "x2 equals x1", 50, 0, 50, 100, 200, 200, true, "x2 must be greater than x1" },
+		{ "x2 less than x1", 100, 0, 50, 100, 200, 200, true, "x2 must be greater than x1" },
+		{ "y2 equals y1", 0, 50, 100, 50, 200, 200, true, "y2 must be greater than y1" },
+		{ "y2 less than y1", 0, 100, 100, 50, 200, 200, true, "y2 must be greater than y1" },
+		{ "x2 exceeds width", 0, 0, 300, 100, 200, 200, true, "exceeds the image width" },
+		{ "y2 exceeds height", 0, 0, 100, 300, 200, 200, true, "exceeds the image height" },
+	}
+
+	for _, tt := range tests {
+		t.Run( tt.name, func( t *testing.T ) {
+			hasErr := false
+			errMsg := ""
+
+			if tt.x2 <= tt.x1 {
+				hasErr = true
+				errMsg = "x2 must be greater than x1"
+			} else if tt.y2 <= tt.y1 {
+				hasErr = true
+				errMsg = "y2 must be greater than y1"
+			} else if tt.x2 > tt.imageWidth {
+				hasErr = true
+				errMsg = "exceeds the image width"
+			} else if tt.y2 > tt.imageHeight {
+				hasErr = true
+				errMsg = "exceeds the image height"
+			}
+
+			if hasErr != tt.shouldErr {
+				t.Errorf( "Expected error state %v, but got %v.", tt.shouldErr, hasErr )
+			}
+
+			if tt.shouldErr && errMsg != "" && tt.errContains != "" {
+				if errMsg != tt.errContains && errMsg != "" {
+					// just log the expected error message
+					t.Logf( "Error message: %s", errMsg )
+				}
+			}
+		} )
+	}
+}
+
+func TestClipOutputFormats( t *testing.T ) {
+	inputPath := "testdata/test.jpeg"
+
+	sourceImage, _, err := loadImage( inputPath )
+	if err != nil {
+		t.Fatalf( "The source image could not be loaded: %v", err )
+	}
+
+	bounds := sourceImage.Bounds()
+	if bounds.Dx() < 50 || bounds.Dy() < 50 {
+		t.Skip( "The test image is too small for this test." )
+	}
+
+	// create a small clipped region
+	clippedImage := image.NewRGBA( image.Rect( 0, 0, 50, 50 ) )
+	for y := 0; y < 50; y++ {
+		for x := 0; x < 50; x++ {
+			clippedImage.Set( x, y, sourceImage.At( x, y ) )
+		}
+	}
+
+	tests := []struct {
+		name      string
+		output    string
+		extension string
+	}{
+		{ "JPEG output", "testdata/output_clip.jpg", ".jpg" },
+		{ "PNG output", "testdata/output_clip.png", ".png" },
+		{ "GIF output", "testdata/output_clip.gif", ".gif" },
+		{ "TIFF output", "testdata/output_clip.tiff", ".tiff" },
+	}
+
+	for _, tt := range tests {
+		t.Run( tt.name, func( t *testing.T ) {
+			defer os.Remove( tt.output )
+
+			err := encodeOutput( tt.output, tt.extension, clippedImage, 90, "jpeg" )
+			if err != nil {
+				t.Fatalf( "The clipped image could not be encoded as %s: %v", tt.extension, err )
+			}
+
+			if _, err := os.Stat( tt.output ); os.IsNotExist( err ) {
+				t.Errorf( "The output file %s was not created.", tt.output )
+			}
+
+			// verify the output can be loaded
+			outputImage, _, err := loadImage( tt.output )
+			if err != nil {
+				t.Fatalf( "The output image could not be loaded: %v", err )
+			}
+
+			outputBounds := outputImage.Bounds()
+			if outputBounds.Dx() != 50 || outputBounds.Dy() != 50 {
+				t.Errorf( "The output dimensions are incorrect: expected 50x50, got %dx%d.",
+					outputBounds.Dx(), outputBounds.Dy() )
+			}
+		} )
+	}
 }

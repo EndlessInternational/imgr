@@ -62,8 +62,8 @@ imgr is designed to be called by AI assistants and automated systems:
 
 ### Core Features
 
-**Supported Formats:**  
-Read: JPEG, PNG, GIF, TIFF, WebP, HEIF/HEIC  
+**Supported Formats:**
+Read: JPEG, PNG, GIF, TIFF, WebP, HEIF/HEIC
 Write: JPEG, PNG, GIF, TIFF
 
 **Smart Resizing:**
@@ -71,6 +71,10 @@ Write: JPEG, PNG, GIF, TIFF
 - Images fit within specified bounds when both dimensions are provided.
 - The optional `--no-enlarge` flag prevents upscaling of small images.
 - High-quality bilinear interpolation ensures good visual results.
+
+**Region Extraction:**
+- Extract rectangular regions using pixel coordinates.
+- Useful for cropping, extracting sprites, or isolating parts of images.
 
 ## Usage
 
@@ -85,6 +89,9 @@ imgr transform -w 800 large.jpg small.jpg
 
 # Fit within 1920x1080 (maintains aspect ratio)
 imgr transform -w 1920 -h 1080 photo.jpg wallpaper.jpg
+
+# Extract a region from an image
+imgr clip --x1 100 --y1 100 --x2 500 --y2 400 photo.jpg cropped.jpg
 
 # Get image information
 imgr info photo.jpg
@@ -161,6 +168,43 @@ Transparency: false
 Color Model:  YCbCr
 File Size:    245680 bytes (239.92 KB)
 ```
+
+#### clip
+
+Extract a rectangular region from an image.
+
+```bash
+imgr clip [options] <input> <output>
+```
+
+**Flags:**
+- `--x1 N` - Left edge x coordinate (required).
+- `--y1 N` - Top edge y coordinate (required).
+- `--x2 N` - Right edge x coordinate (required).
+- `--y2 N` - Bottom edge y coordinate (required).
+- `-q, --quality N` - Sets the JPEG quality from 0 to 100 (default: 90).
+
+**Examples:**
+
+```bash
+# Extract a 400x300 region starting at (100, 100)
+imgr clip --x1 100 --y1 100 --x2 500 --y2 400 photo.jpg cropped.jpg
+
+# Extract top-left corner (first 500x500 pixels)
+imgr clip --x1 0 --y1 0 --x2 500 --y2 500 photo.jpg corner.jpg
+
+# Extract and save as PNG
+imgr clip --x1 200 --y1 150 --x2 800 --y2 600 photo.jpg region.png
+
+# Extract with high JPEG quality
+imgr clip --x1 0 --y1 0 --x2 1000 --y2 1000 -q 95 photo.jpg hq-crop.jpg
+```
+
+**Notes:**
+- Coordinates are in pixels, with (0, 0) at the top-left corner.
+- x2 must be greater than x1, and y2 must be greater than y1.
+- Coordinates must not exceed the image dimensions.
+- The output format is determined by the output file extension.
 
 ### JSON Output
 
@@ -246,6 +290,21 @@ imgr transform -w 1080 -h 1080 photo.jpg instagram.jpg
 imgr transform -w 1500 -h 500 header.jpg twitter.jpg
 ```
 
+#### Extract regions from images
+
+```bash
+# Crop out a face or object
+imgr clip --x1 200 --y1 100 --x2 600 --y2 500 photo.jpg face.jpg
+
+# Extract multiple regions from a sprite sheet
+imgr clip --x1 0 --y1 0 --x2 64 --y2 64 sprites.png sprite1.png
+imgr clip --x1 64 --y1 0 --x2 128 --y2 64 sprites.png sprite2.png
+
+# Crop and then resize
+imgr clip --x1 100 --y1 100 --x2 900 --y2 700 photo.jpg cropped.jpg
+imgr transform -w 400 cropped.jpg thumbnail.jpg
+```
+
 #### Programmatic use
 
 ```bash
@@ -320,6 +379,8 @@ Test images are in `testdata/`. The test suite includes:
 - Resizing algorithms
 - Aspect ratio preservation
 - Dimension validation
+- Clipping regions
+- Clip coordinate validation
 - Info command
 - JSON output
 - Error handling
@@ -347,6 +408,7 @@ All other formats (JPEG, PNG, GIF, TIFF, WebP) are pure Go with zero runtime dep
 
 - Core image formats (JPEG, PNG, GIF, TIFF, WebP, HEIC)
 - Resizing with high-quality interpolation
+- Region extraction (clipping)
 - Format conversion
 - Aspect ratio preservation
 - Image metadata inspection
