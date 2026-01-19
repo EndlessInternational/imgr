@@ -430,7 +430,8 @@ For these features, consider specialized tools like ImageMagick, FFmpeg, or dedi
 Contributions welcome! Please ensure:
 
 - **Code follows Go conventions** - Use standard Go idioms and patterns.
-- **Full variable names** - Avoid abbreviations except common ones like `img`.
+- **Indentation uses 2 spaces** - Use spaces only, not tabs.
+- **Full variable names** - Avoid abbreviations except common ones like `err`.
 - **Consistent spacing** - Include spaces after `(` `[` `{` and before `)` `]` `}`.
 - **Error messages are complete English sentences** - Start with capital letters and end with periods.
 - **Tests pass** - Run `go test -v` before submitting.
