@@ -477,7 +477,6 @@ func encodeOutput( path string, extension string, img image.Image, quality int, 
 	if err != nil {
 		return fmt.Errorf( "The output file %s could not be created: %w", path, err )
 	}
-	defer outputFile.Close()
 
 	// for unknown extensions, use input format ( fall back to jpeg for formats we can't write )
 	supportedExtensions := map[ string ]bool{
@@ -511,8 +510,10 @@ func encodeOutput( path string, extension string, img image.Image, quality int, 
 	}
 
 	if err != nil {
+		outputFile.Close()
+		os.Remove( path )
 		return fmt.Errorf( "Failed to encode image as %s: %w", effectiveExtension, err )
 	}
 
-	return nil
+	return outputFile.Close()
 }
