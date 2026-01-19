@@ -70,7 +70,7 @@ func TestTransformBasicResize( t *testing.T ) {
 	
 	originalWidth := sourceImage.Bounds().Dx()
 	
-	err = encodeOutput( outputPath, ".jpg", sourceImage, 90 )
+	err = encodeOutput( outputPath, ".jpg", sourceImage, 90, "jpeg" )
 	if err != nil {
 		t.Fatalf( "The output could not be encoded: %v", err )
 	}
@@ -127,7 +127,7 @@ func TestFormatConversion( t *testing.T ) {
 				t.Fatalf( "The file %s could not be loaded: %v", tt.input, err )
 			}
 			
-			err = encodeOutput( tt.output, filepath.Ext( tt.output ), sourceImage, 90 )
+			err = encodeOutput( tt.output, filepath.Ext( tt.output ), sourceImage, 90, "jpeg" )
 			if err != nil {
 				t.Fatalf( "The file %s could not be encoded: %v", tt.output, err )
 			}

@@ -365,7 +365,7 @@ func transformImage( context *cli.Context ) ( *TransformResult, error ) {
 	}
 
 	outputExtension := strings.ToLower( filepath.Ext( outputPath ) )
-	err = encodeOutput( outputPath, outputExtension, destinationImage, quality )
+	err = encodeOutput( outputPath, outputExtension, destinationImage, quality, format )
 	if err != nil {
 		return nil, fmt.Errorf( "The output file %s could not be written: %w", outputPath, err )
 	}
@@ -472,14 +472,33 @@ func imageInfo( context *cli.Context ) ( *InfoResult, error ) {
 	}, nil
 }
 
-func encodeOutput( path string, extension string, img image.Image, quality int ) error {
+func encodeOutput( path string, extension string, img image.Image, quality int, inputFormat string ) error {
 	outputFile, err := os.Create( path )
 	if err != nil {
 		return fmt.Errorf( "The output file %s could not be created: %w", path, err )
 	}
 	defer outputFile.Close()
 
-	switch extension {
+	// for unknown extensions, use input format ( fall back to jpeg for formats we can't write )
+	supportedExtensions := map[ string ]bool{
+		".png": true, ".gif": true, ".jpg": true, ".jpeg": true, ".tif": true, ".tiff": true,
+	}
+
+	effectiveExtension := extension
+	if !supportedExtensions[ extension ] {
+		switch inputFormat {
+		case "png":
+			effectiveExtension = ".png"
+		case "gif":
+			effectiveExtension = ".gif"
+		case "tiff":
+			effectiveExtension = ".tiff"
+		default:
+			effectiveExtension = ".jpeg"
+		}
+	}
+
+	switch effectiveExtension {
 	case ".png":
 		err = png.Encode( outputFile, img )
 	case ".gif":
@@ -489,13 +508,10 @@ func encodeOutput( path string, extension string, img image.Image, quality int )
 		err = jpeg.Encode( outputFile, img, options )
 	case ".tif", ".tiff":
 		err = tiff.Encode( outputFile, img, &tiff.Options{ Compression: tiff.Deflate } )
-	default:
-		options := &jpeg.Options{ Quality: quality }
-		err = jpeg.Encode( outputFile, img, options )
 	}
 
 	if err != nil {
-		return fmt.Errorf( "Failed to encode image as %s: %w", extension, err )
+		return fmt.Errorf( "Failed to encode image as %s: %w", effectiveExtension, err )
 	}
 
 	return nil
