@@ -86,9 +86,9 @@ func main() {
     Usage:            "A minimal image manipulator.",
     Description:      "A lightweight tool for resizing and converting images with low " +
                       "footprint and minimal runtime dependencies.\n" +
-                      "Supports reading: JPEG, PNG, GIF, TIFF, WebP, HEIF/HEIC.\n" +
+                      "Supports reading: JPEG, PNG, GIF, TIFF, WebP, HEIF/HEIC, AVIF.\n" +
                       "Supports writing: JPEG, PNG, GIF, TIFF.\n\n",
-    Version:          "1.4.0",
+    Version:          "1.5.0",
     Flags: []cli.Flag{
       &cli.BoolFlag{
         Name:         "json",
@@ -203,7 +203,7 @@ func outputSuccess( data interface{}, useJSON bool ) {
 func loadImage( path string ) ( image.Image, string, error ) {
   extension := strings.ToLower( filepath.Ext( path ) )
 
-  if extension == ".heic" || extension == ".heif" {
+  if extension == ".heic" || extension == ".heif" || extension == ".avif" {
     return decodeHeif( path )
   }
 

@@ -28,7 +28,7 @@ sudo apt-get install libheif-dev
 sudo dnf install libheif-devel
 ```
 
-**Note:** libheif is only required for HEIC/HEIF support. All other formats work without any system dependencies.
+**Note:** libheif is only required for HEIC/HEIF/AVIF support. All other formats work without any system dependencies.
 
 ### Build from source
 
@@ -63,7 +63,7 @@ imgr is designed to be called by AI assistants and automated systems:
 ### Core Features
 
 **Supported Formats:**
-Read: JPEG, PNG, GIF, TIFF, WebP, HEIF/HEIC
+Read: JPEG, PNG, GIF, TIFF, WebP, HEIF/HEIC, AVIF
 Write: JPEG, PNG, GIF, TIFF
 
 **Smart Resizing:**
@@ -374,7 +374,7 @@ go test -v -run TestLoadImageJPEG
 ```
 
 Test images are in `testdata/`. The test suite includes:
-- Format loading (JPEG, PNG, HEIC)
+- Format loading (JPEG, PNG, HEIC, AVIF)
 - Format conversion
 - Resizing algorithms
 - Aspect ratio preservation
@@ -393,7 +393,7 @@ Test images are in `testdata/`. The test suite includes:
 - `github.com/strukturag/libheif/go/heif` - HEIC support
 
 ### Runtime
-- **libheif** - Only for HEIC/HEIC format support
+- **libheif** - Only for HEIC/HEIF/AVIF format support
 
 All other formats (JPEG, PNG, GIF, TIFF, WebP) are pure Go with zero runtime dependencies.
 
@@ -402,11 +402,11 @@ All other formats (JPEG, PNG, GIF, TIFF, WebP) are pure Go with zero runtime dep
 **Binary Size:** ~4 MB  
 **Memory Usage:** Scales with image size, typically 10-50 MB for common images  
 **Startup Time:** <10ms  
-**Dependencies:** 1 system library (libheif, HEIC only) vs 20+ for comparable tools
+**Dependencies:** 1 system library (libheif, HEIC/AVIF only) vs 20+ for comparable tools
 
 ## What imgr includes
 
-- Core image formats (JPEG, PNG, GIF, TIFF, WebP, HEIC)
+- Core image formats (JPEG, PNG, GIF, TIFF, WebP, HEIC, AVIF)
 - Resizing with high-quality interpolation
 - Region extraction (clipping)
 - Format conversion

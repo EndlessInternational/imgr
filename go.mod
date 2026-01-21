@@ -3,7 +3,7 @@ module imgr
 go 1.25.5
 
 require (
-	github.com/strukturag/libheif v1.21.1
+	github.com/strukturag/libheif v1.21.2
 	github.com/urfave/cli/v2 v2.27.7
 	golang.org/x/image v0.35.0
 )
