@@ -76,9 +76,36 @@ func TestLoadImageAVIF( t *testing.T ) {
   t.Logf( "AVIF image loaded: %dx%d.", bounds.Dx(), bounds.Dy() )
 }
 
+func TestLoadImageBMP( t *testing.T ) {
+  if _, err := os.Stat( "testdata/test.bmp" ); os.IsNotExist( err ) {
+    t.Skip( "BMP test file not present, skipping." )
+  }
+
+  img, format, err := loadImage( "testdata/test.bmp" )
+
+  if err != nil {
+    t.Fatalf( "The BMP image could not be loaded: %v", err )
+  }
+
+  if format != "bmp" {
+    t.Errorf( "Expected format to be 'bmp', but got '%s'.", format )
+  }
+
+  if img == nil {
+    t.Error( "The image should not be nil." )
+  }
+
+  bounds := img.Bounds()
+  if bounds.Dx() <= 0 || bounds.Dy() <= 0 {
+    t.Errorf( "The image has invalid dimensions: %dx%d.", bounds.Dx(), bounds.Dy() )
+  }
+
+  t.Logf( "BMP image loaded: %dx%d.", bounds.Dx(), bounds.Dy() )
+}
+
 func TestLoadImageNonExistent( t *testing.T ) {
   _, _, err := loadImage( "testdata/nonexistent.jpg" )
-  
+
   if err == nil {
     t.Error( "Expected an error for non-existent file, but got none." )
   }
@@ -143,6 +170,7 @@ func TestFormatConversion( t *testing.T ) {
     { "JPEG to PNG", "testdata/test.jpeg", "testdata/output.png", "png" },
     { "JPEG to GIF", "testdata/test.jpeg", "testdata/output.gif", "gif" },
     { "JPEG to TIFF", "testdata/test.jpeg", "testdata/output.tiff", "tiff" },
+    { "JPEG to BMP", "testdata/test.jpeg", "testdata/output.bmp", "bmp" },
   }
   
   for _, tt := range tests {

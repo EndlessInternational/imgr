@@ -16,8 +16,10 @@ import (
 
   "github.com/strukturag/libheif/go/heif"
   "github.com/urfave/cli/v2"
+  "golang.org/x/image/bmp"
   "golang.org/x/image/draw"
   "golang.org/x/image/tiff"
+  _ "golang.org/x/image/bmp"
   _ "golang.org/x/image/tiff"
   _ "golang.org/x/image/webp"
 )
@@ -86,9 +88,9 @@ func main() {
     Usage:            "A minimal image manipulator.",
     Description:      "A lightweight tool for resizing and converting images with low " +
                       "footprint and minimal runtime dependencies.\n" +
-                      "Supports reading: JPEG, PNG, GIF, TIFF, WebP, HEIF/HEIC, AVIF.\n" +
-                      "Supports writing: JPEG, PNG, GIF, TIFF.\n\n",
-    Version:          "1.5.0",
+                      "Supports reading: JPEG, PNG, GIF, TIFF, BMP, WebP, HEIF/HEIC, AVIF.\n" +
+                      "Supports writing: JPEG, PNG, GIF, TIFF, BMP.\n\n",
+    Version:          "1.6.0",
     Flags: []cli.Flag{
       &cli.BoolFlag{
         Name:         "json",
@@ -649,7 +651,7 @@ func encodeOutput( path string, extension string, img image.Image, quality int, 
 
   // for unknown extensions, use input format ( fall back to jpeg for formats we can't write )
   supportedExtensions := map[ string ]bool{
-    ".png": true, ".gif": true, ".jpg": true, ".jpeg": true, ".tif": true, ".tiff": true,
+    ".png": true, ".gif": true, ".jpg": true, ".jpeg": true, ".tif": true, ".tiff": true, ".bmp": true,
   }
 
   effectiveExtension := extension
@@ -661,6 +663,8 @@ func encodeOutput( path string, extension string, img image.Image, quality int, 
       effectiveExtension = ".gif"
     case "tiff":
       effectiveExtension = ".tiff"
+    case "bmp":
+      effectiveExtension = ".bmp"
     default:
       effectiveExtension = ".jpeg"
     }
@@ -676,6 +680,8 @@ func encodeOutput( path string, extension string, img image.Image, quality int, 
     err = jpeg.Encode( outputFile, img, options )
   case ".tif", ".tiff":
     err = tiff.Encode( outputFile, img, &tiff.Options{ Compression: tiff.Deflate } )
+  case ".bmp":
+    err = bmp.Encode( outputFile, img )
   }
 
   if err != nil {

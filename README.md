@@ -63,8 +63,8 @@ imgr is designed to be called by AI assistants and automated systems:
 ### Core Features
 
 **Supported Formats:**
-Read: JPEG, PNG, GIF, TIFF, WebP, HEIF/HEIC, AVIF
-Write: JPEG, PNG, GIF, TIFF
+Read: JPEG, PNG, GIF, TIFF, BMP, WebP, HEIF/HEIC, AVIF
+Write: JPEG, PNG, GIF, TIFF, BMP
 
 **Smart Resizing:**
 - The tool maintains aspect ratio by default.
@@ -374,7 +374,7 @@ go test -v -run TestLoadImageJPEG
 ```
 
 Test images are in `testdata/`. The test suite includes:
-- Format loading (JPEG, PNG, HEIC, AVIF)
+- Format loading (JPEG, PNG, HEIC, AVIF, BMP)
 - Format conversion
 - Resizing algorithms
 - Aspect ratio preservation
@@ -395,7 +395,7 @@ Test images are in `testdata/`. The test suite includes:
 ### Runtime
 - **libheif** - Only for HEIC/HEIF/AVIF format support
 
-All other formats (JPEG, PNG, GIF, TIFF, WebP) are pure Go with zero runtime dependencies.
+All other formats (JPEG, PNG, GIF, TIFF, BMP, WebP) are pure Go with zero runtime dependencies.
 
 ## Resource Profile
 
@@ -406,7 +406,7 @@ All other formats (JPEG, PNG, GIF, TIFF, WebP) are pure Go with zero runtime dep
 
 ## What imgr includes
 
-- Core image formats (JPEG, PNG, GIF, TIFF, WebP, HEIC, AVIF)
+- Core image formats (JPEG, PNG, GIF, TIFF, BMP, WebP, HEIC, AVIF)
 - Resizing with high-quality interpolation
 - Region extraction (clipping)
 - Format conversion
