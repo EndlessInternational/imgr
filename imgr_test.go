@@ -194,6 +194,104 @@ func TestFormatConversion( t *testing.T ) {
   }
 }
 
+func TestRotateImage90( t *testing.T ) {
+  inputPath := "testdata/test.jpeg"
+
+  sourceImage, _, err := loadImage( inputPath )
+  if err != nil {
+    t.Fatalf( "The source image could not be loaded: %v", err )
+  }
+
+  originalWidth := sourceImage.Bounds().Dx()
+  originalHeight := sourceImage.Bounds().Dy()
+
+  rotated := rotateImage( sourceImage, 90 )
+
+  rotatedWidth := rotated.Bounds().Dx()
+  rotatedHeight := rotated.Bounds().Dy()
+
+  if rotatedWidth != originalHeight || rotatedHeight != originalWidth {
+    t.Errorf( "Expected dimensions %dx%d after 90° rotation, but got %dx%d.",
+      originalHeight, originalWidth, rotatedWidth, rotatedHeight )
+  }
+
+  t.Logf( "Rotated 90°: %dx%d -> %dx%d.", originalWidth, originalHeight, rotatedWidth, rotatedHeight )
+}
+
+func TestRotateImage180( t *testing.T ) {
+  inputPath := "testdata/test.jpeg"
+
+  sourceImage, _, err := loadImage( inputPath )
+  if err != nil {
+    t.Fatalf( "The source image could not be loaded: %v", err )
+  }
+
+  originalWidth := sourceImage.Bounds().Dx()
+  originalHeight := sourceImage.Bounds().Dy()
+
+  rotated := rotateImage( sourceImage, 180 )
+
+  rotatedWidth := rotated.Bounds().Dx()
+  rotatedHeight := rotated.Bounds().Dy()
+
+  if rotatedWidth != originalWidth || rotatedHeight != originalHeight {
+    t.Errorf( "Expected dimensions %dx%d after 180° rotation, but got %dx%d.",
+      originalWidth, originalHeight, rotatedWidth, rotatedHeight )
+  }
+
+  t.Logf( "Rotated 180°: %dx%d -> %dx%d.", originalWidth, originalHeight, rotatedWidth, rotatedHeight )
+}
+
+func TestRotateImage270( t *testing.T ) {
+  inputPath := "testdata/test.jpeg"
+
+  sourceImage, _, err := loadImage( inputPath )
+  if err != nil {
+    t.Fatalf( "The source image could not be loaded: %v", err )
+  }
+
+  originalWidth := sourceImage.Bounds().Dx()
+  originalHeight := sourceImage.Bounds().Dy()
+
+  rotated := rotateImage( sourceImage, 270 )
+
+  rotatedWidth := rotated.Bounds().Dx()
+  rotatedHeight := rotated.Bounds().Dy()
+
+  if rotatedWidth != originalHeight || rotatedHeight != originalWidth {
+    t.Errorf( "Expected dimensions %dx%d after 270° rotation, but got %dx%d.",
+      originalHeight, originalWidth, rotatedWidth, rotatedHeight )
+  }
+
+  t.Logf( "Rotated 270°: %dx%d -> %dx%d.", originalWidth, originalHeight, rotatedWidth, rotatedHeight )
+}
+
+func TestRotateValidation( t *testing.T ) {
+  tests := []struct {
+    degrees   int
+    shouldErr bool
+  }{
+    { 0, false },
+    { 90, false },
+    { 180, false },
+    { 270, false },
+    { 45, true },
+    { -90, true },
+    { 360, true },
+  }
+
+  for _, tt := range tests {
+    t.Run( fmt.Sprintf( "rotate_%d", tt.degrees ), func( t *testing.T ) {
+      isValid := tt.degrees == 0 || tt.degrees == 90 || tt.degrees == 180 || tt.degrees == 270
+      hasErr := !isValid
+
+      if hasErr != tt.shouldErr {
+        t.Errorf( "Expected error state %v for %d degrees, but got %v.", tt.shouldErr, tt.degrees, hasErr )
+      }
+    } )
+  }
+}
+
 func TestQualityValidation( t *testing.T ) {
   tests := []struct {
     quality   int

@@ -120,6 +120,7 @@ imgr transform [options] <input> <output>
 - `-w, --width N` - Sets the output width in pixels (or maximum width when height is also specified).
 - `-h, --height N` - Sets the output height in pixels (or maximum height when width is also specified).
 - `-q, --quality N` - Sets the JPEG quality from 0 to 100 (default: 90).
+- `-r, --rotate N` - Rotates the image clockwise by N degrees (90, 180, or 270).
 - `--no-enlarge` - Prevents the output image from being larger than the source image.
 
 **Examples:**
@@ -142,6 +143,12 @@ imgr transform -w 2000 -h 2000 --no-enlarge small.jpg output.jpg
 
 # High quality JPEG
 imgr transform -w 1920 -q 95 photo.jpg high-quality.jpg
+
+# Rotate 90° clockwise
+imgr transform --rotate 90 photo.jpg rotated.jpg
+
+# Rotate and resize
+imgr transform --rotate 90 -w 800 photo.jpg rotated-small.jpg
 
 # Format conversion
 imgr transform photo.heic photo.jpg          # HEIC → JPEG

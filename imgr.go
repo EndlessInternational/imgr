@@ -90,7 +90,7 @@ func main() {
                       "footprint and minimal runtime dependencies.\n" +
                       "Supports reading: JPEG, PNG, GIF, TIFF, BMP, WebP, HEIF/HEIC, AVIF.\n" +
                       "Supports writing: JPEG, PNG, GIF, TIFF, BMP.\n\n",
-    Version:          "1.6.0",
+    Version:          "1.7.0",
     Flags: []cli.Flag{
       &cli.BoolFlag{
         Name:         "json",
@@ -124,6 +124,12 @@ func main() {
           &cli.BoolFlag{
             Name:     "no-enlarge",
             Usage:    "never make image larger than source",
+          },
+          &cli.IntFlag{
+            Name:     "rotate",
+            Aliases:  []string{ "r" },
+            Usage:    "rotate image clockwise (90, 180, or 270 degrees)",
+            Value:    0,
           },
         },
         Action: transformImageCommand,
@@ -247,6 +253,44 @@ func decodeHeif( path string ) ( image.Image, string, error ) {
   return goImage, "heif", nil
 }
 
+func rotateImage( img image.Image, degrees int ) image.Image {
+  bounds := img.Bounds()
+  width := bounds.Dx()
+  height := bounds.Dy()
+
+  switch degrees {
+  case 90:
+    rotated := image.NewRGBA( image.Rect( 0, 0, height, width ) )
+    for y := 0; y < height; y++ {
+      for x := 0; x < width; x++ {
+        rotated.Set( height-1-y, x, img.At( x+bounds.Min.X, y+bounds.Min.Y ) )
+      }
+    }
+    return rotated
+
+  case 180:
+    rotated := image.NewRGBA( image.Rect( 0, 0, width, height ) )
+    for y := 0; y < height; y++ {
+      for x := 0; x < width; x++ {
+        rotated.Set( width-1-x, height-1-y, img.At( x+bounds.Min.X, y+bounds.Min.Y ) )
+      }
+    }
+    return rotated
+
+  case 270:
+    rotated := image.NewRGBA( image.Rect( 0, 0, height, width ) )
+    for y := 0; y < height; y++ {
+      for x := 0; x < width; x++ {
+        rotated.Set( y, width-1-x, img.At( x+bounds.Min.X, y+bounds.Min.Y ) )
+      }
+    }
+    return rotated
+
+  default:
+    return img
+  }
+}
+
 func transformImageCommand( context *cli.Context ) error {
   useJSON := context.Bool( "json" )
   result, err := transformImage( context )
@@ -277,6 +321,11 @@ func transformImage( context *cli.Context ) ( *TransformResult, error ) {
   maxHeight := context.Int( "height" )
   quality := context.Int( "quality" )
   noEnlarge := context.Bool( "no-enlarge" )
+  rotate := context.Int( "rotate" )
+
+  if rotate != 0 && rotate != 90 && rotate != 180 && rotate != 270 {
+    return nil, fmt.Errorf( "Rotation must be 0, 90, 180, or 270 degrees, but got %d.", rotate )
+  }
 
   if maxWidth < 0 {
     return nil, fmt.Errorf( "Width cannot be negative, but got %d.", maxWidth )
@@ -298,6 +347,11 @@ func transformImage( context *cli.Context ) ( *TransformResult, error ) {
 
   if sourceImage == nil {
     return nil, fmt.Errorf( "The decoded image from %s is invalid.", inputPath )
+  }
+
+  // apply rotation before resizing
+  if rotate != 0 {
+    sourceImage = rotateImage( sourceImage, rotate )
   }
 
   bounds := sourceImage.Bounds()
